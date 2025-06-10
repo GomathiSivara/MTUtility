@@ -230,8 +230,10 @@ public struct MTCustomAlertView: View {
     let secondaryButtonTitle: String?
     let onPrimary: () -> Void
     let onSecondary: (() -> Void)?
-    let font: Font
-    let color: Color
+    let textFont: Font
+    let textColor: Color
+    let buttonFont: Font
+    let buttonColor: Color
 
     public var body: some View {
         ZStack {
@@ -240,27 +242,37 @@ public struct MTCustomAlertView: View {
             VStack(spacing: 16) {
                 if !title.isEmpty {
                     Text(title)
-                        .font(font.weight(.semibold))
-                        .foregroundColor(color)
+                        .font(textFont.weight(.semibold))
+                        .foregroundColor(textColor)
                         .multilineTextAlignment(.center)
                 }
                 Text(message)
-                    .font(font)
-                    .foregroundColor(color)
+                    .font(textFont)
+                    .foregroundColor(textColor)
                     .multilineTextAlignment(.center)
                 Divider()
                 HStack {
                     if let secondary = secondaryButtonTitle, let onSecondary = onSecondary {
-                        Button(secondary) {
+                        Button(action: {
                             onSecondary()
+                        }) {
+                            Text(secondary)
+                                .font(buttonFont)
+                                .foregroundColor(buttonColor)
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    Button(primaryButtonTitle) {
+                    
+                    Button(action: {
                         onPrimary()
+                    }) {
+                        Text(primaryButtonTitle)
+                            .font(buttonFont.weight(.semibold))
+                            .foregroundColor(buttonColor)
                     }
                     .frame(maxWidth: .infinity)
                 }
+
             }
             .padding()
             .background(Color(.systemBackground))
