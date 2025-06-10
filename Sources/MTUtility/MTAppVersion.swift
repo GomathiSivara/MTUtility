@@ -218,74 +218,133 @@ public struct MTHeader: Codable {
 
 public extension View {
     @MainActor
-    func appVersionAlert(with appVersion: MTAppVersion) -> some View {
-        let message = appVersion.alertMessage
-        var primaryButtonTitle: String = ""
-        var secondaryButtonTitle: String = ""
-         switch appVersion.showAlert {
-            case .none:
-                break
-            case .normal:
-                primaryButtonTitle = "Update"
-                secondaryButtonTitle = "Later"
-            case .force:
-                primaryButtonTitle = "Update"
-        }
-        
-        if #available(iOS 15.0, *) {
-            return alert(Text(""),
-                         isPresented: .constant(appVersion.showAlert != .none)) {
-                switch appVersion.showAlert {
-                case .none:
-                    EmptyView() // Alert won't be presented in None
-                case .normal:
-                    Button(secondaryButtonTitle) {
+    func appVersionAlert(
+        with appVersion: MTAppVersion,
+        font: Font? = nil,
+        color: Color? = nil
+    ) -> some View {
+        let showCustom = (font != nil || color != nil) && appVersion.showAlert != .none
+        let primaryButtonTitle = "Update"
+        let secondaryButtonTitle = appVersion.showAlert == .normal ? "Later" : nil
+
+        return ZStack {
+            self
+            if showCustom {
+                MTCustomAlertView(
+                    title: "",
+                    message: appVersion.alertMessage,
+                    primaryButtonTitle: primaryButtonTitle,
+                    secondaryButtonTitle: secondaryButtonTitle,
+                    onPrimary: {
+                        appVersion.openInAppStore()
+                        appVersion.showAlert = .none
+                    },
+                    onSecondary: secondaryButtonTitle != nil ? {
                         appVersion.updateDisplayedAlertTime()
                         appVersion.showAlert = .none
-                    }
-                    Button(primaryButtonTitle) {
-                        appVersion.openInAppStore()
-                        appVersion.showAlert = .none
-                    }
-                case .force:
-                    Button(primaryButtonTitle) {
-                        appVersion.openInAppStore()
-                        appVersion.showAlert = .none
-                    }
-                }
-            } message: {
-                Text(message)
-            }
-        } else {
-            return alert(isPresented: .constant(appVersion.showAlert != .none)) {
-                switch appVersion.showAlert {
-                    case .none:
-                        return Alert(title: Text("")) // Alert won't be presented in None
-                    case .normal:
-                        return Alert(title: Text(""),
-                              message: Text(message),
-                              primaryButton: .default(Text(primaryButtonTitle), action: {
-                            appVersion.openInAppStore()
-                            appVersion.showAlert = .none
-                        }),
-                              secondaryButton: .default(Text(secondaryButtonTitle), action: {
-                            appVersion.updateDisplayedAlertTime()
-                            appVersion.showAlert = .none
-                        }))
-                    case .force:
-                        return Alert(title: Text(""),
-                              message: Text(message),
-                              dismissButton: .default(Text(primaryButtonTitle), action: {
-                            appVersion.openInAppStore()
-                            appVersion.showAlert = .none
-                        }))
-                }
+                    } : nil,
+                    font: font ?? .body,
+                    color: color ?? .primary
+                )
             }
         }
-
+        .modifier(SystemAlertModifier(
+            appVersion: appVersion,
+            showSystemAlert: !showCustom
+        ))
     }
 }
 
+// Helper modifier to conditionally show the system alert
+private struct SystemAlertModifier: ViewModifier {
+    @ObservedObject var appVersion: MTAppVersion
+    let showSystemAlert: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                Group {
+                    if showSystemAlert {
+                        SystemAlertView(appVersion: appVersion)
+                    }
+                }
+            )
+    }
+}
+
+// Extracted system alert logic as a helper view
+private struct SystemAlertView: View {
+    @ObservedObject var appVersion: MTAppVersion
+
+    var body: some View {
+        let message = appVersion.alertMessage
+        var primaryButtonTitle = ""
+        var secondaryButtonTitle = ""
+        switch appVersion.showAlert {
+        case .none: break
+        case .normal:
+            primaryButtonTitle = "Update"
+            secondaryButtonTitle = "Later"
+        case .force:
+            primaryButtonTitle = "Update"
+        }
+
+        return Group {
+            if #available(iOS 15.0, *) {
+                EmptyView()
+                    .alert(Text(""),
+                           isPresented: .constant(appVersion.showAlert != .none)) {
+                        switch appVersion.showAlert {
+                        case .none:
+                            EmptyView()
+                        case .normal:
+                            Button(secondaryButtonTitle) {
+                                appVersion.updateDisplayedAlertTime()
+                                appVersion.showAlert = .none
+                            }
+                            Button(primaryButtonTitle) {
+                                appVersion.openInAppStore()
+                                appVersion.showAlert = .none
+                            }
+                        case .force:
+                            Button(primaryButtonTitle) {
+                                appVersion.openInAppStore()
+                                appVersion.showAlert = .none
+                            }
+                        }
+                    } message: {
+                        Text(message)
+                    }
+            } else {
+                EmptyView()
+                    .alert(isPresented: .constant(appVersion.showAlert != .none)) {
+                        switch appVersion.showAlert {
+                        case .none:
+                            return Alert(title: Text(""))
+                        case .normal:
+                            return Alert(title: Text(""),
+                                         message: Text(message),
+                                         primaryButton: .default(Text(primaryButtonTitle), action: {
+                                appVersion.openInAppStore()
+                                appVersion.showAlert = .none
+                            }),
+                                         secondaryButton: .default(Text(secondaryButtonTitle), action: {
+                                appVersion.updateDisplayedAlertTime()
+                                appVersion.showAlert = .none
+                            }))
+                        case .force:
+                            return Alert(title: Text(""),
+                                         message: Text(message),
+                                         dismissButton: .default(Text(primaryButtonTitle), action: {
+                                appVersion.openInAppStore()
+                                appVersion.showAlert = .none
+                            }))
+                        }
+                    }
+            }
+        }
+    }
+}
 #warning("Move this to Readme for documentation")
 
 struct MyView: View {
