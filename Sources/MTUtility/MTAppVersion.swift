@@ -1,6 +1,6 @@
 //
 //  MTAppVersion.swift
-//  
+//
 //
 //  Created by Dhanushkumar Kanagaraj on 03/10/22.
 //
@@ -220,10 +220,12 @@ public extension View {
     @MainActor
     func appVersionAlert(
         with appVersion: MTAppVersion,
-        font: Font? = nil,
-        color: Color? = nil
+        textFont: Font? = nil,
+        textColor: Color? = nil,
+        buttonFont: Font? = nil,
+        buttonColor: Color? = nil
     ) -> some View {
-        let showCustom = (font != nil || color != nil) && appVersion.showAlert != .none
+        let showCustom = (textFont != nil && textColor != nil && buttonFont != nil && buttonColor != nil) && appVersion.showAlert == .none
         let primaryButtonTitle = "Update"
         let secondaryButtonTitle = appVersion.showAlert == .normal ? "Later" : nil
 
@@ -232,7 +234,7 @@ public extension View {
             if showCustom {
                 MTCustomAlertView(
                     title: "",
-                    message: appVersion.alertMessage,
+                    message:  "Your app is out of date. Please update to continue using the app.",
                     primaryButtonTitle: primaryButtonTitle,
                     secondaryButtonTitle: secondaryButtonTitle,
                     onPrimary: {
@@ -243,8 +245,10 @@ public extension View {
                         appVersion.updateDisplayedAlertTime()
                         appVersion.showAlert = .none
                     } : nil,
-                    font: font ?? .body,
-                    color: color ?? .primary
+                    textFont: textFont ?? .body,
+                    textColor: textColor ?? .primary,
+                    buttonFont: buttonFont ?? .body,
+                    buttonColor: buttonColor ?? .blue
                 )
             }
         }
@@ -343,53 +347,5 @@ private struct SystemAlertView: View {
                     }
             }
         }
-    }
-}
-#warning("Move this to Readme for documentation")
-
-struct MyView: View {
-    @StateObject var appVersion = MTAppVersion(appID: "app_ID", URLPath: "https://www.urlpath.com")
-    @State var selectedImage: UIImage? = nil
-    @State var showPicker: Bool = false {
-        didSet {
-            list.append("Hola - \(showPicker)")
-        }
-    }
-    @State var list: [String] = []
-    @Environment(\.scenePhase) var scenePhase
-
-    var body: some View {
-        VStack{
-            Text("Dummy Text")
-            List(list, id: \.self) { val in
-                Text(val)
-            }
-            Button("Image Picker") {
-                showPicker = true
-            }
-            .sheet(isPresented: $showPicker) {
-                ImagePicker(selectedImage: $selectedImage)
-            }
-            if let selectedImage {
-                Image(uiImage: selectedImage)
-                    .resizable()
-            }
-        }
-        .appVersionAlert(with: appVersion)
-        .onChange(of: scenePhase) { scenePhase in
-            switch scenePhase {
-                case .active:
-                    // Check the app versioning when app becomes ACTIVE
-                    appVersion.checkAppVersioning()
-                default:
-                    break
-            }
-        }
-    }
-}
-
-struct MyView_Previews: PreviewProvider {
-    static var previews: some View {
-        MyView()
     }
 }
